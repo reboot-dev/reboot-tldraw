@@ -73,39 +73,11 @@ export function useRebootStore(
     });
 
     const snapshot = localStorage.getItem(
-      `reboot-tldraw-document5-${persistenceKey}`
+      `reboot-tldraw-document6-${persistenceKey}`
     );
 
     if (snapshot !== null) {
-      const { schema, document } = JSON.parse(snapshot);
-
-      const migrationResult = store.schema.migrateStoreSnapshot({
-        schema,
-        store: document,
-      });
-
-      if (migrationResult.type === "error") {
-        console.error("Failed to migrate store", migrationResult);
-        return;
-      }
-
-      const documentTypes = new Set(
-	Object.values(store.schema.types)
-	  .filter((t) => t.scope === "document")
-	  .map((t) => t.typeName)
-      );
-
-      const records = Object.values(migrationResult.value).filter(
-        (r) => documentTypes.has(r.typeName)
-      );
-
-      if (records.length > 0) {
-	// Merge the changes into the REAL STORE.
-	store.mergeRemoteChanges(() => {
-	  // Calling put will validate the records!
-	  store.put(records, "initialize");
-	});
-      }
+      store.loadStoreSnapshot(JSON.parse(snapshot));
     }
 
     // const $sessionStateSnapshot: Signal<TLSessionStateSnapshot | null> =
@@ -119,11 +91,8 @@ export function useRebootStore(
         changesUntilStore -= 1;
         if (changesUntilStore === 0) {
           localStorage.setItem(
-            `reboot-tldraw-document5-${persistenceKey}`,
-            JSON.stringify({
-              schema: store.schema.serialize(),
-              document: store.serialize(),
-            })
+            `reboot-tldraw-document6-${persistenceKey}`,
+            JSON.stringify(store.getStoreSnapshot())
           );
           console.log("STORED");
           changesUntilStore = 10;
