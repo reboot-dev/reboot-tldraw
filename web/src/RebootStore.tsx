@@ -8,7 +8,7 @@ import {
   type TLStore,
   type TLStoreSnapshot
 } from "@tldraw/tlschema";
-// import { WeakCache } from "@tldraw/utils";
+import { getNetworkDiff } from "@tldraw/sync-core";
 import { useEffect, useRef, useState } from "react";
 import { WebContext } from "@reboot-dev/reboot-web";
 import {
@@ -20,7 +20,7 @@ import {
   useShallowObjectIdentity,
   useRefState,
 } from "@tldraw/editor";
-// import { TLLocalSyncClient } from "../utils/sync/TLLocalSyncClient";
+import { applyNetworkDiff } from "../../common/diffs.js";
 import { useAuthority } from "../../api/rbt/thirdparty/tldraw/v1/authority_rbt_react.js";
 import { Authority } from "../../api/rbt/thirdparty/tldraw/v1/authority_rbt_web.js";
 
@@ -57,9 +57,11 @@ export function useRebootStore(
 
     const stopListenForUserAndDocumentChanges = store.current.listen(
       async ({ changes }) => {
-        if (!isRecordsDiffEmpty(changes)) {
-          diffsToBeApplied.current = [...diffsToBeApplied.current, changes];
+        const networkDiff = getNetworkDiff(changes);
+        if (!networkDiff) {
+          return;
         }
+        diffsToBeApplied.current = [...diffsToBeApplied.current, changes];
         if (!applying.current) {
           applying.current = true;
           while (diffsToBeApplied.current.length > 0) {
@@ -68,7 +70,9 @@ export function useRebootStore(
             // TODO: cap max amount of changes to send?
             const versionForApply = version.current;
             const { response } = await authority.apply({
-              diffs: diffsBeingApplied.current,
+              diff: getNetworkDiff(
+                squashRecordDiffs(diffsBeingApplied.current)
+              ),
               version: versionForApply,
             });
             if (response) {
@@ -149,26 +153,32 @@ export function useRebootStore(
 
         store.current.mergeRemoteChanges(() => {
           // First unapply any local changes.
-          const diffs = [
-            ...diffsBeingApplied.current, ...diffsToBeApplied.current
-          ];
-          if (diffs.length > 0) {
+          if (
+              diffsBeingApplied.current.length > 0 ||
+              diffsToBeApplied.current.length > 0
+          ){
             store.current.applyDiff(
-              reverseRecordsDiff(squashRecordDiffs(diffs)),
+              reverseRecordsDiff(
+                squashRecordDiffs([
+                  ...diffsBeingApplied.current, ...diffsToBeApplied.current
+                ])
+              ),
               { runCallbacks: false }
             );
           }
 
           // Now apply the diffs we received.
-          store.current.applyDiff(squashRecordDiffs(response.diffs));
+          for (const diff of response.diffs) {
+            applyNetworkDiff(store.current, diff);
+          }
 
           // Now re-apply local changes on top of what is authoritative.
-          if (diffs.length > 0) {
-            try {
-              // Need to do this separately for `diffsBeingApplied`
-              // and `diffsToBeApplied` so that any outstanding `apply()
-              // will work properly.
-              let diff = store.current.extractingChanges(() => {
+          try {
+            // Need to do this separately for `diffsBeingApplied`
+            // and `diffsToBeApplied` so that any outstanding `apply()
+            // will work properly.
+            if (diffsBeingApplied.current.length > 0) {
+              const diff = store.current.extractingChanges(() => {
 	        store.current.applyDiff(
                   squashRecordDiffs(diffsBeingApplied.current)
                 );
@@ -176,7 +186,9 @@ export function useRebootStore(
               if (!isRecordsDiffEmpty(diff)) {
 	        diffsBeingApplied.current = [diff];
               }
-              diff = store.current.extractingChanges(() => {
+            }
+            if (diffsToBeApplied.current.length > 0) {
+              const diff = store.current.extractingChanges(() => {
 	        store.current.applyDiff(
                   squashRecordDiffs(diffsToBeApplied.current)
                 );
@@ -184,11 +196,11 @@ export function useRebootStore(
               if (!isRecordsDiffEmpty(diff)) {
                 diffsToBeApplied.current = [diff];
               }
-	    } catch (e) {
-	      console.error(e)
-              // TODO: can we even get here?
-	    }
-          }
+            }
+	  } catch (e) {
+	    console.error(e)
+            // TODO: can we even get here?
+	  }
         });
 
         // Update `sinceVersion` and if necessary also update the

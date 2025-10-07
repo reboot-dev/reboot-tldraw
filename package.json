@@ -9,10 +9,11 @@
   "dependencies": {
     "@reboot-dev/reboot": "0.38.1",
     "@reboot-dev/reboot-api": "0.38.1",
-    "@reboot-dev/reboot-std": "0.38.1",
     "@reboot-dev/reboot-react": "0.38.1",
-    "zod": "^4.1.11",
-    "tldraw": "^4.0.3"
+    "@reboot-dev/reboot-std": "0.38.1",
+    "@tldraw/sync-core": "^4.0.3",
+    "tldraw": "^4.0.3",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

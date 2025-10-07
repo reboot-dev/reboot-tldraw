@@ -1,8 +1,9 @@
-import { Checkpoint } from "../../../api/rbt/thirdparty/tldraw/v1/checkpoint_rbt.js";
 import { ReaderContext, WriterContext, allow } from "@reboot-dev/reboot";
 import { assert } from "@reboot-dev/reboot-api";
 import { createTLStore } from "@tldraw/editor";
 import { type RecordsDiff, squashRecordDiffs } from "@tldraw/store";
+import { Checkpoint } from "../../../api/rbt/thirdparty/tldraw/v1/checkpoint_rbt.js";
+import { applyNetworkDiff } from "../../../common/diffs.js";
 
 export class CheckpointServicer extends Checkpoint.Servicer {
   authorizer() {
@@ -33,10 +34,10 @@ export class CheckpointServicer extends Checkpoint.Servicer {
       return;
     }
 
-    const diff: RecordsDiff = squashRecordDiffs(diffs);
-
     store.mergeRemoteChanges(() => {
-      store.applyDiff(diff);
+      for (const diff of diffs) {
+        applyNetworkDiff(store, diff);
+      }
     });
 
     this.state.snapshot = store.getStoreSnapshot();

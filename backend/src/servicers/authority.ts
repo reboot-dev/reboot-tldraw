@@ -1,5 +1,3 @@
-import { Authority } from "../../../api/rbt/thirdparty/tldraw/v1/authority_rbt.js";
-import { Checkpoint } from "../../../api/rbt/thirdparty/tldraw/v1/checkpoint_rbt.js";
 import {
   ReaderContext,
   WriterContext,
@@ -11,9 +9,11 @@ import {
 import { assert, errors_pb } from "@reboot-dev/reboot-api";
 import { SortedMap } from "@reboot-dev/reboot-std/collections/v1/sorted_map.js";
 import { createTLStore } from "@tldraw/editor";
-import { type RecordsDiff, squashRecordDiffs } from "@tldraw/store";
 import { type TLStore, type TLStoreSnapshot } from "@tldraw/tlschema";
 import { z } from "zod/v4";
+import { Authority } from "../../../api/rbt/thirdparty/tldraw/v1/authority_rbt.js";
+import { Checkpoint } from "../../../api/rbt/thirdparty/tldraw/v1/checkpoint_rbt.js";
+import { applyNetworkDiff } from "../../../common/diffs.js";
 
 const encode = (value: any): Uint8Array => {
   return new TextEncoder().encode(JSON.stringify(value));
@@ -57,10 +57,10 @@ export class AuthorityServicer extends Authority.Servicer {
       const diffs = this.state.diffs.slice(version - this.state.version);
       assert(diffs.length > 0);
 
-      const diff: RecordsDiff = squashRecordDiffs(diffs);
-
       store.mergeRemoteChanges(() => {
-        store.applyDiff(diff);
+        for (const diff of diffs) {
+          applyNetworkDiff(store, diff);
+        }
       });
 
       this.#cache = { store, version: version + diffs.length };
@@ -103,13 +103,13 @@ export class AuthorityServicer extends Authority.Servicer {
 
     // TODO: ensure this "throws" if we can't apply these diffs.
     store.mergeRemoteChanges(() => {
-      store.applyDiff(squashRecordDiffs(request.diffs));
+      applyNetworkDiff(store, request.diff);
     });
 
     // NOTE: we don't update `this.#cache` as that is a side-effect;
     // instead `this.cache()` will correctly return a store based on
     // the latest `state` when ever we need it.
-    this.state.diffs = [...this.state.diffs, ...request.diffs];
+    this.state.diffs = [...this.state.diffs, request.diff];
 
     return { version: this.state.version + this.state.diffs.length };
   }

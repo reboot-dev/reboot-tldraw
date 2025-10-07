@@ -21,8 +21,8 @@ export const api = {
       apply: {
         kind: "writer",
         request: {
-          // Array of `RecordsDiff` from '@tldraw/store'.
-          diffs: z.array(z.json()).meta({ tag: 1 }),
+          // A `NetworkDiff` from '@tldraw/sync-core'.
+          diff: z.json().meta({ tag: 1 }),
           version: z.number().meta({ tag: 2 }),
         },
         response: {
@@ -35,7 +35,7 @@ export const api = {
           sinceVersion: z.number().meta({ tag: 1 }),
         },
         response: {
-          // Array of `RecordsDiff` from '@tldraw/store'.
+          // Array of `NetworkDiff` from '@tldraw/sync-core'.
           diffs: z.array(z.json()).meta({ tag: 1 }),
         },
       },
