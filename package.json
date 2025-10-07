@@ -1,0 +1,20 @@
+{
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rbt dev run",
+    "prepare": "rbt --help"
+  },
+  "dependencies": {
+    "@reboot-dev/reboot": "0.38.1",
+    "@reboot-dev/reboot-api": "0.38.1",
+    "@reboot-dev/reboot-std": "0.38.1",
+    "@reboot-dev/reboot-react": "0.38.1",
+    "zod": "^4.1.11",
+    "tldraw": "^4.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

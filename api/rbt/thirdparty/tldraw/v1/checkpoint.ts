@@ -4,8 +4,8 @@ export const api = {
   Checkpoint: {
     state: {
       // A `StoreSnapshot` from '@tldraw/store'.
-      snapshot: z.json().meta({ tag: 1 }),
-      version: z.number().meta({ tag: 2 }),
+      snapshot: z.json().optional().meta({ tag: 1 }),
+      version: z.number().default(0).meta({ tag: 2 }),
     },
 
     methods: {
@@ -14,16 +14,15 @@ export const api = {
         request: {},
         response: {
           // A `StoreSnapshot` from '@tldraw/store'.
-          snapshot: z.json().meta({ tag: 1 }),
+          snapshot: z.json().optional().meta({ tag: 1 }),
           version: z.number().meta({ tag: 2 }),
         },
       },
       update: {
         kind: "writer",
         request: {
-          // A `RecordsDiff` from '@tldraw/store'.
-          diffs: z.json().meta({ tag: 1 }),
-          version: z.number().meta({ tag: 2 }),
+          // Array of `RecordsDiff` from '@tldraw/store'.
+          diffs: z.array(z.json()).default(() => []).meta({ tag: 1 }),
         },
         response: z.void(),
       },

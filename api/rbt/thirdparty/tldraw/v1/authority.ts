@@ -14,18 +14,20 @@ export const api = {
         request: {},
         response: {
           // A `StoreSnapshot` from '@tldraw/store'.
-          snapshot: z.json().meta({ tag: 1 }),
+          snapshot: z.json().optional().meta({ tag: 1 }),
           version: z.number().meta({ tag: 2 }),
         },
       },
       apply: {
         kind: "writer",
         request: {
-          // A `RecordsDiff` from '@tldraw/store'.
-          diffs: z.json().meta({ tag: 1 }),
+          // Array of `RecordsDiff` from '@tldraw/store'.
+          diffs: z.array(z.json()).meta({ tag: 1 }),
           version: z.number().meta({ tag: 2 }),
         },
-        response: z.void(),
+        response: {
+          version: z.number().meta({ tag: 1 }),
+        },
       },
       changes: {
         kind: "reader",
@@ -33,9 +35,15 @@ export const api = {
           sinceVersion: z.number().meta({ tag: 1 }),
         },
         response: {
-          // A `RecordsDiff` from '@tldraw/store'.
-          diffs: z.json().meta({ tag: 1 }),
+          // Array of `RecordsDiff` from '@tldraw/store'.
+          diffs: z.array(z.json()).meta({ tag: 1 }),
         },
+      },
+      // Internal `workflow`, not intended to get called externally.
+      checkpoint: {
+        kind: "workflow",
+        request: {},
+        response: {},
       },
     },
   },
